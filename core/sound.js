@@ -138,6 +138,15 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.connect(f).connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
     },
+    // one gallop beat (two hooves); `near` 0..1 makes it louder as the cow approaches
+    hoof(near) {
+      if (!enabled || !ensure()) return;
+      const t = ctx.currentTime, v = 0.15 + 0.7 * near * near;
+      for (const d of [0, 0.06]) {
+        tone('sine', 110, 45, 0.09, v, t + d);
+        noise(0.05, 'lowpass', 900, 1, v * 0.5, null, t + d);
+      }
+    },
     whistle(dur) {
       if (!enabled || !ensure()) return;
       tone('sine', 2200, 350, dur, 0.18);

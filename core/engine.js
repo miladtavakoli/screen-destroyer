@@ -308,6 +308,51 @@
     ctx.fillText(e, 0, 0);
     ctx.restore();
   }
+
+  // ---------- real photo sprites (Wikimedia Commons, see img/CREDITS.md) ----------
+  const SPR = {};
+  for (const n of ['ant', 'roach', 'bee', 'fly', 'chainsaw', 'missile', 'cow', 'sheep']) {
+    const im = new Image(); im.src = `img/${n}.webp`; SPR[n] = im;
+  }
+  const ok = (n) => SPR[n].complete && SPR[n].naturalWidth > 0;
+  const HAS_FILTER = 'filter' in fctx;
+  const shadowCache = {};
+  // soft dark silhouette of a sprite, used as a realistic contact/drop shadow
+  function shadowOf(n) {
+    if (shadowCache[n]) return shadowCache[n];
+    const im = SPR[n], pad = Math.ceil(im.naturalWidth * 0.08);
+    const c = document.createElement('canvas');
+    c.width = im.naturalWidth + pad * 2; c.height = im.naturalHeight + pad * 2;
+    const x = c.getContext('2d');
+    if (HAS_FILTER) x.filter = `blur(${Math.max(2, pad / 3)}px)`;
+    x.drawImage(im, pad, pad);
+    x.filter = 'none';
+    x.globalCompositeOperation = 'source-in'; x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+    c.pad = pad;
+    return (shadowCache[n] = c);
+  }
+  // draw a sprite of length `len` (px) centred at x,y, rotated so its head points along `rot`
+  function drawSprite(ctx, n, x, y, len, rot, o) {
+    if (!ok(n)) return;
+    o = o || {};
+    const im = SPR[n], k = len / im.naturalWidth, w = len, h = im.naturalHeight * k;
+    const ax = o.ax ?? 0.5, ay = o.ay ?? 0.5;
+    const sx = (o.flip ? -1 : 1) * (o.sx || 1), sy = o.sy || 1;
+    if (o.shadow) {
+      const sh = shadowOf(n), p = sh.pad * k;
+      ctx.save();
+      ctx.translate(x + o.shadow[0], y + o.shadow[1]); ctx.rotate(rot - (o.head || 0)); ctx.scale(sx, sy);
+      ctx.globalAlpha = o.shadow[2];
+      ctx.drawImage(sh, -ax * w - p, -ay * h - p, w + 2 * p, h + 2 * p);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(rot - (o.head || 0)); ctx.scale(sx, sy);
+    ctx.globalAlpha = o.alpha ?? 1;
+    if (o.filter && HAS_FILTER) ctx.filter = o.filter;
+    ctx.drawImage(im, -ax * w, -ay * h, w, h);
+    ctx.restore();
+  }
   function edgePoint() {
     switch (rint(0, 3)) {
       case 0: return { x: rnd(0, W), y: -25 };
@@ -345,27 +390,11 @@
     }
     if (Math.random() < 0.5) addParticle({ k: 'dust', x: x1, y: y1, vx: rnd(-60, 60), vy: rnd(-80, -10), life: rnd(0.5, 1), age: 0, s: rnd(4, 9) * SC });
   }
-  function drawChainsaw(ctx, x, y, ang, tt) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang + Math.PI);
-    ctx.translate(rnd(-1, 1), rnd(-1, 1)); // engine vibration
-    const L = 78 * SC, T = 13 * SC;
-    // guide bar
-    ctx.fillStyle = '#9aa3a8'; ctx.strokeStyle = '#4b5257'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(0, -T / 2, L, T, T / 2); ctx.fill(); ctx.stroke();
-    // chain teeth running around the bar
-    ctx.fillStyle = '#2b2f33';
-    const off = (tt * 300 * SC) % (7 * SC);
-    for (let d = off; d < L - 4 * SC; d += 7 * SC) {
-      ctx.beginPath(); ctx.moveTo(d, -T / 2); ctx.lineTo(d + 3 * SC, -T / 2 - 3 * SC); ctx.lineTo(d + 5 * SC, -T / 2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(L - d, T / 2); ctx.lineTo(L - d - 3 * SC, T / 2 + 3 * SC); ctx.lineTo(L - d - 5 * SC, T / 2); ctx.fill();
-    }
-    // motor body + handle
-    ctx.fillStyle = '#ff6f00'; ctx.strokeStyle = '#7a3300';
-    ctx.beginPath(); ctx.roundRect(L - 4 * SC, -15 * SC, 40 * SC, 30 * SC, 7 * SC); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#212121';
-    ctx.beginPath(); ctx.roundRect(L + 8 * SC, -21 * SC, 26 * SC, 7 * SC, 3 * SC); ctx.fill();
-    ctx.fillStyle = '#ffe0b2'; ctx.font = `bold ${9 * SC}px sans-serif`; ctx.fillText('SAW', L + 4 * SC, 4 * SC);
-    ctx.restore();
+  function drawChainsaw(ctx, x, y, ang) {
+    // photo: bar tip at (0, 0.2); body→tip direction ≈ −167.6°
+    const j = 1.5 * SC;
+    drawSprite(ctx, 'chainsaw', x + rnd(-j, j), y + rnd(-j, j), 210 * SC, ang + 2.925,
+      { ax: 0, ay: 0.2, shadow: [10 * SC, 16 * SC, 0.3] });
   }
 
   // ---------- NUKE ----------
@@ -421,6 +450,19 @@
     shake = Math.max(shake, 45);
     Sound.nuke(); Host.vibrate(1000);
   }
+  function drawMissile(r) {
+    const len = 200 * SC;
+    // photo nose points left (head = π); exhaust glows behind the tail
+    const tx = r.x - Math.cos(r.ang) * len * 0.5, ty = r.y - Math.sin(r.ang) * len * 0.5;
+    fctx.save(); fctx.globalCompositeOperation = 'lighter';
+    const fl = len * rnd(0.35, 0.5);
+    const g = fctx.createRadialGradient(tx, ty, 0, tx, ty, fl);
+    g.addColorStop(0, 'rgba(255,250,220,0.95)'); g.addColorStop(0.3, 'rgba(255,190,80,0.7)'); g.addColorStop(1, 'rgba(255,90,0,0)');
+    fctx.fillStyle = g; fctx.translate(tx, ty); fctx.rotate(r.ang); fctx.scale(1.6, 0.45);
+    fctx.beginPath(); fctx.arc(-fl * 0.35, 0, fl, 0, TAU); fctx.fill();
+    fctx.restore();
+    drawSprite(fctx, 'missile', r.x, r.y, len, r.ang, { head: Math.PI, shadow: [25 * SC, 45 * SC, 0.15] });
+  }
   function drawMushroom(m) {
     const t = m.t, k = Math.min(1, t / 2.2), fade = t > m.life - 1.5 ? (m.life - t) / 1.5 : 1;
     const capY = m.y - 300 * SC * (1 - Math.pow(1 - k, 2));
@@ -454,17 +496,25 @@
 
   // ---------- HONEY ----------
   const honeySpots = [], drips = [];
-  const HONEY = 'rgba(222,140,12,0.92)', HONEY_HI = 'rgba(255,236,170,0.6)';
   let lastHoney = null;
+  function honeyBlob(x, y, r, gloss) {
+    const g = mctx.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r);
+    g.addColorStop(0, 'rgba(255,196,70,0.50)');
+    g.addColorStop(0.7, 'rgba(214,128,14,0.62)');
+    g.addColorStop(1, 'rgba(150,72,4,0.75)');
+    mctx.fillStyle = g; mctx.beginPath(); mctx.arc(x, y, r, 0, TAU); mctx.fill();
+    if (gloss) {
+      const hg = mctx.createRadialGradient(x - r * 0.38, y - r * 0.42, 0, x - r * 0.38, y - r * 0.42, r * 0.45);
+      hg.addColorStop(0, 'rgba(255,255,245,0.85)'); hg.addColorStop(1, 'rgba(255,255,245,0)');
+      mctx.fillStyle = hg; mctx.beginPath(); mctx.arc(x - r * 0.38, y - r * 0.42, r * 0.45, 0, TAU); mctx.fill();
+    }
+  }
   function pourHoney(x, y) {
-    if (lastHoney && Math.hypot(x - lastHoney.x, y - lastHoney.y) < 5 * SC) return;
-    const r = rnd(8, 13) * SC;
-    mctx.fillStyle = HONEY;
-    mctx.beginPath(); mctx.arc(x, y, r, 0, TAU); mctx.fill();
-    mctx.fillStyle = HONEY_HI;
-    mctx.beginPath(); mctx.ellipse(x - r * 0.35, y - r * 0.4, r * 0.35, r * 0.2, -0.6, 0, TAU); mctx.fill();
-    if (Math.random() < 0.3 && drips.length < 60) {
-      drips.push({ x: x + rnd(-r, r) * 0.6, y: y + r * 0.6, v: rnd(18, 40) * SC, len: rnd(30, 170) * SC, done: 0, r: rnd(3, 5.5) * SC });
+    if (lastHoney && Math.hypot(x - lastHoney.x, y - lastHoney.y) < 6 * SC) return;
+    const r = rnd(9, 14) * SC;
+    honeyBlob(x, y, r, true);
+    if (Math.random() < 0.35 && drips.length < 60) {
+      drips.push({ x: x + rnd(-r, r) * 0.5, y: y + r * 0.5, v: rnd(16, 34) * SC, len: rnd(40, 200) * SC, done: 0, r: rnd(3.5, 6) * SC, lastY: -1e9 });
     }
     honeySpots.push({ x, y });
     if (honeySpots.length > 80) honeySpots.shift();
@@ -473,13 +523,13 @@
   function updateDrips(dt) {
     for (let i = drips.length - 1; i >= 0; i--) {
       const d = drips[i];
-      const step = d.v * dt; d.v *= Math.pow(0.6, dt); d.v = Math.max(d.v, 6 * SC);
+      const step = d.v * dt; d.v = Math.max(d.v * Math.pow(0.65, dt), 5 * SC);
       d.y += step; d.done += step;
-      mctx.fillStyle = HONEY; mctx.beginPath(); mctx.arc(d.x, d.y, d.r, 0, TAU); mctx.fill();
-      mctx.fillStyle = HONEY_HI; mctx.beginPath(); mctx.arc(d.x - d.r * 0.4, d.y, d.r * 0.22, 0, TAU); mctx.fill();
+      // the stream thins out as it runs
+      const r = d.r * (1 - 0.35 * d.done / d.len);
+      if (d.y - d.lastY > r * 0.6) { honeyBlob(d.x, d.y, r, false); d.lastY = d.y; }
       if (d.done >= d.len) {
-        mctx.fillStyle = HONEY; mctx.beginPath(); mctx.ellipse(d.x, d.y + d.r * 0.4, d.r * 1.35, d.r * 1.6, 0, 0, TAU); mctx.fill();
-        mctx.fillStyle = HONEY_HI; mctx.beginPath(); mctx.arc(d.x - d.r * 0.5, d.y, d.r * 0.35, 0, TAU); mctx.fill();
+        honeyBlob(d.x, d.y + d.r * 0.5, d.r * 1.5, true); // drop collects at the end
         honeySpots.push({ x: d.x, y: d.y });
         drips.splice(i, 1);
       }
@@ -556,64 +606,33 @@
       } else if (offscreen(b.x, b.y, 60)) { arr.splice(i, 1); }
     }
   }
+  // top-down photos; a small side-to-side sway at stride frequency sells the walk
   function drawAnt(ctx, b) {
-    const s = SC * 1.15;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.h);
-    ctx.strokeStyle = '#1b1411'; ctx.lineWidth = 0.9 * s; ctx.lineCap = 'round';
-    for (let i = -1; i <= 1; i++) for (const side of [-1, 1]) {
-      const sw = Math.sin(b.ph + i * 2.1 + (side > 0 ? Math.PI : 0)) * 2.2 * s;
-      ctx.beginPath(); ctx.moveTo(i * 1.6 * s, 0);
-      ctx.lineTo(i * 2.2 * s + sw * 0.4, side * 3 * s); ctx.lineTo(i * 3 * s + sw, side * 6 * s); ctx.stroke();
-    }
-    ctx.fillStyle = '#17110e';
-    ctx.beginPath(); ctx.ellipse(-5.2 * s, 0, 3.8 * s, 2.7 * s, 0, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(0, 0, 2.3 * s, 1.4 * s, 0, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(3.8 * s, 0, 2 * s, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(5 * s, -0.8 * s); ctx.quadraticCurveTo(7 * s, -1.5 * s, 8 * s, -3.2 * s);
-    ctx.moveTo(5 * s, 0.8 * s); ctx.quadraticCurveTo(7 * s, 1.5 * s, 8 * s, 3.2 * s); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(-5.8 * s, -1 * s, 1 * s, 0, TAU); ctx.fill();
-    ctx.restore();
+    const sway = Math.sin(b.ph * 1.3) * 0.07;
+    drawSprite(ctx, 'ant', b.x, b.y, 30 * SC, b.h + sway, { head: 0, shadow: [1.5 * SC, 2.5 * SC, 0.35] });
   }
   function drawRoach(ctx, b) {
-    const s = SC * 1.1;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.h);
-    ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 1.3 * s; ctx.lineCap = 'round';
-    for (let i = -1; i <= 1; i++) for (const side of [-1, 1]) {
-      const sw = Math.sin(b.ph + i * 2.1 + (side > 0 ? Math.PI : 0)) * 4 * s;
-      ctx.beginPath(); ctx.moveTo(i * 4 * s, side * 3 * s);
-      ctx.lineTo(i * 5 * s + sw * 0.5, side * 9 * s); ctx.lineTo(i * 8 * s + sw - 3 * s, side * 15 * s); ctx.stroke();
-    }
-    const g = ctx.createLinearGradient(0, -7 * s, 0, 7 * s);
-    g.addColorStop(0, '#7a4a20'); g.addColorStop(0.5, '#5a3312'); g.addColorStop(1, '#3d220b');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(-3 * s, 0, 13 * s, 7 * s, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(20,10,0,0.6)'; ctx.lineWidth = 1 * s;
-    ctx.beginPath(); ctx.moveTo(6 * s, 0); ctx.lineTo(-15 * s, 0); ctx.stroke();
-    ctx.fillStyle = '#3a210c'; ctx.beginPath(); ctx.ellipse(8 * s, 0, 4.5 * s, 6 * s, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#c99a5a'; ctx.beginPath(); ctx.ellipse(8.5 * s, 0, 2.2 * s, 3.4 * s, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#2a1708'; ctx.beginPath(); ctx.arc(12.5 * s, 0, 2.6 * s, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#4a2c12'; ctx.lineWidth = 0.8 * s;
-    const wv = Math.sin(b.t * 9) * 3 * s;
-    ctx.beginPath(); ctx.moveTo(14 * s, -1 * s); ctx.quadraticCurveTo(24 * s, -6 * s + wv, 32 * s, -14 * s - wv);
-    ctx.moveTo(14 * s, 1 * s); ctx.quadraticCurveTo(24 * s, 6 * s - wv, 32 * s, 14 * s + wv); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,230,190,0.25)'; ctx.beginPath(); ctx.ellipse(-4 * s, -3 * s, 7 * s, 1.6 * s, 0, 0, TAU); ctx.fill();
-    ctx.restore();
+    const sway = b.pause > 0 ? 0 : Math.sin(b.ph * 2) * 0.05;
+    drawSprite(ctx, 'roach', b.x, b.y, 46 * SC, b.h + sway, { head: Math.PI, shadow: [2 * SC, 3 * SC, 0.4] });
   }
   function squash(b, quiet) {
     const big = b.k === 'roach';
-    const r = (big ? 14 : 5) * SC;
-    mctx.fillStyle = big ? 'rgba(150,145,70,0.7)' : 'rgba(45,30,15,0.75)';
+    const len = (big ? 46 : 30) * SC;
+    const r = len * 0.32;
+    // body fluids first, then the flattened insect on top
+    mctx.fillStyle = big ? 'rgba(170,160,95,0.55)' : 'rgba(60,45,25,0.45)';
     mctx.beginPath();
-    for (let i = 0; i <= 14; i++) {
-      const a = (i / 14) * TAU, rr = r * rnd(0.5, 1.5);
+    for (let i = 0; i <= 18; i++) {
+      const a = (i / 18) * TAU, rr = r * rnd(0.6, 1.5);
       i ? mctx.lineTo(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr) : mctx.moveTo(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr);
     }
     mctx.fill();
-    mctx.fillStyle = big ? 'rgba(70,40,15,0.9)' : 'rgba(15,10,8,0.9)';
-    mctx.beginPath(); mctx.ellipse(b.x, b.y, r * 0.8, r * 0.45, b.h, 0, TAU); mctx.fill();
-    mctx.strokeStyle = mctx.fillStyle; mctx.lineWidth = big ? 1.2 : 0.8;
-    for (let i = 0; i < 6; i++) {
-      const a = rnd(0, TAU), d = r * rnd(0.8, 1.8);
-      mctx.beginPath(); mctx.moveTo(b.x + Math.cos(a) * r * 0.5, b.y + Math.sin(a) * r * 0.5); mctx.lineTo(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d); mctx.stroke();
+    drawSprite(mctx, big ? 'roach' : 'ant', b.x, b.y, len * 1.05, b.h + rnd(-0.3, 0.3),
+      { head: big ? Math.PI : 0, sy: 1.25, sx: 0.92, filter: 'brightness(0.55) saturate(0.7) contrast(1.2)', alpha: 0.95 });
+    mctx.fillStyle = big ? 'rgba(200,190,120,0.5)' : 'rgba(40,30,20,0.5)';
+    for (let i = 0; i < 7; i++) {
+      const a = rnd(0, TAU), d = r * rnd(1.1, 2.2);
+      mctx.beginPath(); mctx.arc(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, rnd(0.8, 2.2) * SC, 0, TAU); mctx.fill();
     }
     if (!quiet) { Sound.crunch(); Host.vibrate(big ? 40 : 20); }
   }
@@ -650,63 +669,62 @@
     }
     if (bees.length || buzzOn) { Sound.buzz(bees.length); buzzOn = bees.length > 0; }
   }
-  function drawBee(ctx, x, y, vx, ph, rot) {
-    const s = SC * 1.1;
-    ctx.save(); ctx.translate(x, y + Math.sin(ph * 9) * 2 * s);
-    if (rot) ctx.rotate(rot);
-    if (vx < 0) ctx.scale(-1, 1);
-    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(3 * s, 16 * s, 8 * s, 2.5 * s, 0, 0, TAU); ctx.fill();
-    // body
-    ctx.save();
-    ctx.beginPath(); ctx.ellipse(0, 0, 10 * s, 7 * s, 0, 0, TAU); ctx.clip();
-    ctx.fillStyle = '#ffc107'; ctx.fillRect(-11 * s, -8 * s, 22 * s, 16 * s);
-    ctx.fillStyle = '#1a1a1a';
-    for (const sx of [-6, -1, 4]) ctx.fillRect(sx * s, -8 * s, 2.6 * s, 16 * s);
-    ctx.restore();
-    // stinger + head
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.moveTo(-9.5 * s, -1.5 * s); ctx.lineTo(-14 * s, 0); ctx.lineTo(-9.5 * s, 1.5 * s); ctx.fill();
-    ctx.beginPath(); ctx.arc(10 * s, -1 * s, 4.5 * s, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(11.5 * s, -2.2 * s, 1.4 * s, 0, TAU); ctx.fill();
-    // wings (flapping)
-    const flap = 0.35 + Math.abs(Math.sin(ph * 55)) * 0.65;
-    ctx.fillStyle = 'rgba(220,240,255,0.7)'; ctx.strokeStyle = 'rgba(120,150,180,0.7)'; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.ellipse(-1 * s, -9 * s * flap - 2 * s, 5 * s, 8 * s * flap, -0.3, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(4 * s, -8 * s * flap - 2 * s, 4 * s, 7 * s * flap, 0.3, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.restore();
+  // bee flies above the glass: big soft offset shadow, wing shimmer, heading follows velocity
+  function drawBee(ctx, b, dead) {
+    if (!dead) {
+      const want = Math.atan2(b.vy, b.vx);
+      b.rot = b.rot === undefined ? want : b.rot + angDiff(b.rot, want) * 0.15;
+    }
+    const lift = dead ? 2 : 16;
+    const y = b.y + (dead ? 0 : Math.sin(b.ph * 7) * 2 * SC);
+    drawSprite(ctx, 'bee', b.x, y, 44 * SC, b.rot, { head: 0, shadow: [lift * 0.6 * SC, lift * SC, dead ? 0.35 : 0.18] });
+    if (!dead) {
+      // motion-blurred wings: faint copies jittering a few degrees
+      drawSprite(ctx, 'bee', b.x, y, 44 * SC, b.rot + rnd(-0.07, 0.07), { head: 0, alpha: 0.28 });
+    }
   }
   function sting(b) {
     const x = b.x, y = b.y;
-    const r = 34 * SC;
+    const r = 30 * SC;
+    // a raised, reddish welt on the glass with the stinger left in it
     const g = mctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(255,90,90,0.55)'); g.addColorStop(0.5, 'rgba(255,120,120,0.3)'); g.addColorStop(1, 'rgba(255,140,140,0)');
+    g.addColorStop(0, 'rgba(230,70,70,0.45)'); g.addColorStop(0.55, 'rgba(240,110,110,0.22)'); g.addColorStop(1, 'rgba(240,130,130,0)');
     mctx.fillStyle = g; mctx.beginPath(); mctx.arc(x, y, r, 0, TAU); mctx.fill();
-    mctx.fillStyle = 'rgba(255,255,255,0.35)'; mctx.beginPath(); mctx.ellipse(x - 6 * SC, y - 7 * SC, 9 * SC, 5 * SC, -0.5, 0, TAU); mctx.fill();
-    mctx.strokeStyle = '#111'; mctx.lineWidth = 1.6 * SC;
-    mctx.beginPath(); mctx.moveTo(x, y); mctx.lineTo(x + 4 * SC, y - 5 * SC); mctx.stroke();
+    const hl = mctx.createRadialGradient(x - 5 * SC, y - 6 * SC, 0, x - 5 * SC, y - 6 * SC, 10 * SC);
+    hl.addColorStop(0, 'rgba(255,255,255,0.35)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+    mctx.fillStyle = hl; mctx.beginPath(); mctx.arc(x - 5 * SC, y - 6 * SC, 10 * SC, 0, TAU); mctx.fill();
+    mctx.strokeStyle = '#2a1a10'; mctx.lineWidth = 1.2 * SC;
+    mctx.beginPath(); mctx.moveTo(x, y); mctx.lineTo(x + 3 * SC, y - 4 * SC); mctx.stroke();
     redFlash = 1;
-    addParticle({ k: 'deadbee', x, y, vx: rnd(-40, 40), vy: -120, rot: 0, vr: rnd(-6, 6), life: 1.4, age: 0, s: 1 });
+    addParticle({ k: 'deadbee', x, y, vx: rnd(-40, 40), vy: -60, rot: b.rot || 0, vr: rnd(-8, 8), life: 1.6, age: 0, s: 1, ph: 0 });
     shake = Math.max(shake, 8);
     Sound.sting(); Host.vibrate(150);
   }
 
   // ---------- SHEEP ----------
-  const sheep = [], stinks = [];
+  const sheep = [];
   function spawnSheep(tx, ty) {
     const fromLeft = tx > W / 2;
-    sheep.push({ x: fromLeft ? -60 * SC : W + 60 * SC, y: ty, tx, dir: fromLeft ? 1 : -1, state: 'in', t: 0, step: 0 });
+    const w = 170 * SC, h = w * (SPR.sheep.naturalHeight || 500) / (SPR.sheep.naturalWidth || 640);
+    sheep.push({ x: fromLeft ? -w : W + w, y: ty, tx, dir: fromLeft ? 1 : -1, state: 'in', t: 0, step: 0, w, h });
   }
+  const flies = [];
   function poop(x, y) {
-    const r = 6.5 * SC;
-    const heap = [[0, 0], [-1.6, 0.2], [1.6, 0.1], [-0.8, -1.3], [0.8, -1.3], [0, -2.5], [-2.8, 0.6], [2.7, 0.5]];
+    const r = 6 * SC;
+    const heap = [[0, 0], [-1.6, 0.2], [1.6, 0.1], [-0.8, -1.3], [0.8, -1.3], [0, -2.5], [-2.8, 0.6], [2.7, 0.5], [-1.9, -0.9]];
     for (const [hx, hy] of heap) {
-      const px = x + hx * r * 1.1 + rnd(-1, 1), py = y + hy * r * 1.05 + rnd(-1, 1);
-      const g = mctx.createRadialGradient(px - r * 0.3, py - r * 0.35, r * 0.1, px, py, r);
-      g.addColorStop(0, '#8d6440'); g.addColorStop(0.6, '#5b3a1e'); g.addColorStop(1, '#3a220e');
-      mctx.fillStyle = g; mctx.beginPath(); mctx.arc(px, py, r * rnd(0.85, 1.1), 0, TAU); mctx.fill();
-      mctx.fillStyle = 'rgba(255,240,220,0.35)'; mctx.beginPath(); mctx.arc(px - r * 0.35, py - r * 0.4, r * 0.22, 0, TAU); mctx.fill();
+      const px = x + hx * r * 1.1 + rnd(-1, 1), py = y + hy * r * 1.05 + rnd(-1, 1), rr = r * rnd(0.8, 1.1);
+      // contact shadow, moist dark body, a little sheen
+      mctx.fillStyle = 'rgba(0,0,0,0.25)'; mctx.beginPath(); mctx.ellipse(px + 1, py + rr * 0.6, rr * 1.05, rr * 0.45, 0, 0, TAU); mctx.fill();
+      const g = mctx.createRadialGradient(px - rr * 0.35, py - rr * 0.4, rr * 0.05, px, py, rr);
+      g.addColorStop(0, '#6b5238'); g.addColorStop(0.45, '#3e2c1a'); g.addColorStop(1, '#1d140b');
+      mctx.fillStyle = g; mctx.beginPath(); mctx.ellipse(px, py, rr, rr * 0.9, rnd(-0.5, 0.5), 0, TAU); mctx.fill();
+      const hg = mctx.createRadialGradient(px - rr * 0.35, py - rr * 0.45, 0, px - rr * 0.35, py - rr * 0.45, rr * 0.35);
+      hg.addColorStop(0, 'rgba(255,240,215,0.55)'); hg.addColorStop(1, 'rgba(255,240,215,0)');
+      mctx.fillStyle = hg; mctx.beginPath(); mctx.arc(px - rr * 0.35, py - rr * 0.45, rr * 0.35, 0, TAU); mctx.fill();
     }
-    stinks.push({ x, y: y - 12 * SC, t: 0, life: 5 });
+    // a couple of house flies find it straight away
+    for (let i = 0; i < 2; i++) flies.push({ cx: x, cy: y - 6 * SC, x: x + rnd(-200, 200) * SC, y: y - rnd(100, 250) * SC, vx: 0, vy: 0, t: 0, life: rnd(7, 10), land: 0 });
     Sound.plop(); Host.vibrate(30);
   }
   function updateSheep(dt) {
@@ -714,92 +732,138 @@
       const s = sheep[i];
       s.t += dt;
       if (s.state === 'in') {
-        s.x += s.dir * 90 * SC * dt; s.step += dt;
-        if ((s.dir > 0 && s.x >= s.tx) || (s.dir < 0 && s.x <= s.tx)) { s.state = 'stop'; s.t = 0; Sound.baa(); }
+        // ease into a stop instead of halting dead
+        const left = Math.abs(s.tx - s.x), v = 85 * SC * Math.min(1, 0.25 + left / (60 * SC));
+        s.x += s.dir * v * dt; s.step += dt * v / (85 * SC);
+        if (left < 2 * SC) { s.state = 'stop'; s.t = 0; Sound.baa(); }
       } else if (s.state === 'stop') {
-        if (s.t > 0.9 && !s.pooped) { s.pooped = true; poop(s.x - s.dir * 26 * SC, s.y + 22 * SC); }
-        if (s.t > 1.9) { s.state = 'out'; s.t = 0; if (Math.random() < 0.5) Sound.baa(); }
+        if (s.t > 1.1 && !s.pooped) { s.pooped = true; poop(s.x - s.dir * s.w * 0.33, s.y + s.h * 0.4); }
+        if (s.t > 2.3) { s.state = 'out'; s.t = 0; if (Math.random() < 0.5) Sound.baa(); }
       } else {
-        s.x += s.dir * 110 * SC * dt; s.step += dt;
-        if (offscreen(s.x, s.y, 80 * SC)) sheep.splice(i, 1);
+        const v = 90 * SC * Math.min(1, 0.3 + s.t * 1.2);
+        s.x += s.dir * v * dt; s.step += dt * v / (85 * SC);
+        if (offscreen(s.x, s.y, s.w)) sheep.splice(i, 1);
       }
     }
+    for (let i = flies.length - 1; i >= 0; i--) {
+      const f = flies[i]; f.t += dt;
+      const leaving = f.t > f.life;
+      if (f.land > 0) { f.land -= dt; if (f.land <= 0) { f.vx = rnd(-200, 200) * SC; f.vy = rnd(-200, -50) * SC; } continue; }
+      const tx = leaving ? f.cx + 800 * SC : f.cx + Math.cos(f.t * 3.1) * 30 * SC, ty = leaving ? f.cy - 900 * SC : f.cy - 18 * SC + Math.sin(f.t * 4.3) * 16 * SC;
+      f.vx = (f.vx + ((tx - f.x) * 6 + rnd(-1500, 1500) * SC) * dt) * Math.pow(0.15, dt);
+      f.vy = (f.vy + ((ty - f.y) * 6 + rnd(-1500, 1500) * SC) * dt) * Math.pow(0.15, dt);
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      if (!leaving && Math.random() < dt * 0.5 && Math.hypot(f.x - f.cx, f.y - f.cy) < 20 * SC) f.land = rnd(0.6, 1.5);
+      if (leaving && offscreen(f.x, f.y, 40)) flies.splice(i, 1);
+    }
   }
+  // side-view photo, legs animated by shearing the lower strips: front and hind
+  // legs swing in opposite phase, the body rises and falls with each step
   function drawSheep(s) {
+    if (!ok('sheep')) return;
+    const im = SPR.sheep, iw = im.naturalWidth, ih = im.naturalHeight;
+    const w = s.w, h = s.h;
     const walking = s.state !== 'stop';
-    const bob = walking ? -Math.abs(Math.sin(s.step * 11)) * 5 * SC : 0;
-    const tilt = s.state === 'stop' && s.t > 0.5 && s.t < 1.3 ? -0.12 * s.dir : (walking ? Math.sin(s.step * 11) * 0.06 : 0);
-    fctx.fillStyle = 'rgba(0,0,0,0.18)'; fctx.beginPath(); fctx.ellipse(s.x, s.y + 30 * SC, 26 * SC, 6 * SC, 0, 0, TAU); fctx.fill();
-    // Noto/Samsung sheep faces left: flip when walking right
-    drawEmoji(fctx, '🐑', s.x, s.y + bob, 64 * SC, s.dir > 0, tilt);
+    const ph = s.step * 9;
+    const bob = walking ? -Math.abs(Math.sin(ph)) * 2.5 * SC : 0;
+    const swing = walking ? Math.sin(ph) * w * 0.045 : 0;
+    // soft ground shadow
+    const g = fctx.createRadialGradient(s.x, s.y + h * 0.48, 0, s.x, s.y + h * 0.48, w * 0.45);
+    g.addColorStop(0, 'rgba(0,0,0,0.32)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    fctx.fillStyle = g; fctx.beginPath(); fctx.ellipse(s.x, s.y + h * 0.48, w * 0.45, h * 0.09, 0, 0, TAU); fctx.fill();
+    fctx.save();
+    fctx.translate(s.x, s.y + bob);
+    if (s.dir > 0) fctx.scale(-1, 1); // photo faces left
+    // a slight squat while doing its business
+    if (s.state === 'stop' && s.t > 0.6 && s.t < 1.6) { fctx.translate(w * 0.3, h * 0.5); fctx.rotate(-0.03); fctx.translate(-w * 0.3, -h * 0.5); }
+    const legTop = 0.6, N = 10;
+    fctx.drawImage(im, 0, 0, iw, ih * legTop, -w / 2, -h / 2, w, h * legTop);
+    for (let k = 0; k < N; k++) {
+      const f0 = legTop + (1 - legTop) * k / N, f1 = legTop + (1 - legTop) * (k + 1) / N;
+      const depth = (k + 0.5) / N;
+      const sy0 = ih * f0, sh = ih * (f1 - f0) + 0.5, dy = -h / 2 + h * f0, dh = h * (f1 - f0) + 0.5;
+      // image left half = front legs (head is on the left), right half = hind legs
+      fctx.drawImage(im, 0, sy0, iw / 2, sh, -w / 2 + swing * depth, dy, w / 2, dh);
+      fctx.drawImage(im, iw / 2, sy0, iw / 2, sh, swing * -depth, dy, w / 2, dh);
+    }
+    fctx.restore();
   }
-  function drawStink(st) {
-    const a = Math.min(1, st.t * 2) * Math.max(0, 1 - st.t / st.life);
-    fctx.strokeStyle = `rgba(110,160,40,${0.75 * a})`; fctx.lineWidth = 2.2 * SC; fctx.lineCap = 'round';
-    for (let k = -1; k <= 1; k++) {
-      fctx.beginPath();
-      for (let j = 0; j <= 12; j++) {
-        const yy = st.y - j * 3.5 * SC - ((st.t * 25 * SC) % (10 * SC));
-        const xx = st.x + k * 11 * SC + Math.sin(j * 0.9 + st.t * 4 + k) * 4 * SC;
-        j ? fctx.lineTo(xx, yy) : fctx.moveTo(xx, yy);
-      }
-      fctx.stroke();
-    }
-    if (st.t < 3) {
-      // a fly circling the pile
-      const fa = st.t * 7;
-      drawEmoji(fctx, '🪰', st.x + Math.cos(fa) * 18 * SC, st.y - 18 * SC + Math.sin(fa * 1.3) * 9 * SC, 14 * SC, Math.cos(fa) > 0, 0, a);
-    }
+  function drawFly(f) {
+    const flying = f.land <= 0;
+    drawSprite(fctx, 'fly', f.x + (flying ? rnd(-1, 1) : 0), f.y, 20 * SC, 0,
+      { flip: f.vx > 0, shadow: flying ? [6 * SC, 14 * SC, 0.15] : [1, 2, 0.3] });
   }
 
   // ---------- COW (charges and headbutts the glass) ----------
   const cows = [];
+  const COW_T = 0.85; // seconds to reach the glass
   function spawnCow(x, y) {
-    cows.push({ x, y, t: 0, phase: 'charge', flip: Math.random() < 0.5 });
+    cows.push({ x, y, t: 0, phase: 'charge', hoof: 0 });
     Sound.moo();
+  }
+  function cowSize() {
+    const w = Math.min(W * 0.9, 430 * SC);
+    return { w, h: w * (SPR.cow.naturalHeight || 592) / (SPR.cow.naturalWidth || 424) };
   }
   function updateCows(dt) {
     for (let i = cows.length - 1; i >= 0; i--) {
       const c = cows[i];
       c.t += dt;
-      if (c.phase === 'charge' && c.t >= 0.75) {
-        c.phase = 'dizzy'; c.t = 0;
-        glassCrack(c.x - 30 * SC, c.y - 40 * SC, 1.1);
-        glassCrack(c.x + 30 * SC, c.y - 40 * SC, 1.1);
-        for (const hx of [-30, 30]) {
-          mctx.fillStyle = 'rgba(10,10,10,0.85)';
-          mctx.beginPath(); mctx.arc(c.x + hx * SC, c.y - 40 * SC, 5 * SC, 0, TAU); mctx.fill();
+      if (c.phase === 'charge') {
+        c.hoof -= dt;
+        if (c.hoof <= 0) { c.hoof = 0.16; Sound.hoof(c.t / COW_T); }
+        if (c.t >= COW_T) {
+          c.phase = 'hit'; c.t = 0;
+          const { w, h } = cowSize();
+          const L = c.x - w / 2, T = c.y - h / 2;
+          for (const [hx, hy] of [[0.04, 0.06], [0.9, 0.03]]) {
+            const px = L + hx * w, py = T + hy * h;
+            glassCrack(px, py, 1.4);
+            mctx.fillStyle = 'rgba(8,8,8,0.9)'; mctx.beginPath(); mctx.arc(px, py, 6 * SC, 0, TAU); mctx.fill();
+          }
+          // wet nose print on the glass
+          const nx = L + 0.37 * w, ny = T + 0.56 * h, nr = w * 0.12;
+          const g = mctx.createRadialGradient(nx, ny, nr * 0.2, nx, ny, nr);
+          g.addColorStop(0, 'rgba(235,240,245,0.10)'); g.addColorStop(0.7, 'rgba(235,240,245,0.22)'); g.addColorStop(1, 'rgba(235,240,245,0)');
+          mctx.fillStyle = g; mctx.beginPath(); mctx.ellipse(nx, ny, nr * 1.2, nr, 0, 0, TAU); mctx.fill();
+          for (let k = 0; k < 4; k++) {
+            mctx.strokeStyle = 'rgba(235,240,245,0.18)'; mctx.lineWidth = rnd(2, 4) * SC; mctx.lineCap = 'round';
+            const sx = nx + rnd(-nr, nr) * 0.7; mctx.beginPath(); mctx.moveTo(sx, ny + nr * 0.5); mctx.lineTo(sx + rnd(-3, 3), ny + nr * 0.5 + rnd(20, 70) * SC); mctx.stroke();
+          }
+          for (let k = 0; k < 30; k++) addParticle({ k: 'dust', x: c.x + rnd(-w, w) * 0.5, y: T + h * rnd(0.85, 1.05), vx: rnd(-120, 120), vy: rnd(-80, 10), life: rnd(0.8, 1.6), age: 0, s: rnd(10, 22) * SC });
+          shake = Math.max(shake, 30);
+          Sound.crack(); Sound.explosion(false); Host.vibrate(350);
         }
-        shake = Math.max(shake, 26);
-        Sound.crack(); Sound.explosion(false); Host.vibrate(300);
-      } else if (c.phase === 'dizzy' && c.t >= 1.6) {
+      } else if (c.phase === 'hit' && c.t >= 0.9) {
         c.phase = 'leave'; c.t = 0; Sound.moo();
-      } else if (c.phase === 'leave' && c.t >= 1.0) {
+      } else if (c.phase === 'leave' && c.t >= 1.3) {
         cows.splice(i, 1);
       }
     }
   }
   function drawCow(c) {
-    let scale, x = c.x, y = c.y, alpha = 1, rot = 0;
+    if (!ok('cow')) return;
+    const { w } = cowSize();
+    let s, x = c.x, y = c.y, alpha = 1, rot = 0;
     if (c.phase === 'charge') {
-      const k = c.t / 0.75;
-      scale = 0.25 + 2.55 * k * k;
-      y = c.y - (1 - k) * 90 * SC;
-      x = c.x + Math.sin(c.t * 30) * 4 * SC * k;
-    } else if (c.phase === 'dizzy') {
-      scale = 2.8 - Math.min(0.35, c.t * 1.5);
-      rot = Math.sin(c.t * 9) * 0.12;
-    } else {
-      const k = c.t / 1.0;
-      scale = 2.45 - 2.2 * k; alpha = 1 - k; y = c.y - k * 80 * SC;
-    }
-    drawEmoji(fctx, '🐄', x, y + 20 * SC * scale * 0.3, 52 * SC * scale, c.flip, rot, alpha);
-    if (c.phase === 'dizzy') {
-      for (let i = 0; i < 3; i++) {
-        const a = c.t * 5 + i * TAU / 3;
-        drawEmoji(fctx, '⭐', c.x + Math.cos(a) * 55 * SC, c.y - 95 * SC + Math.sin(a) * 14 * SC, 18 * SC);
+      const k = c.t / COW_T;
+      s = 0.08 + 0.92 * Math.pow(k, 2.3);          // perspective: accelerates as it approaches
+      y = c.y - (1 - k) * H * 0.18 + Math.abs(Math.sin(c.t * 15)) * -8 * SC * s; // gallop bob
+      rot = Math.sin(c.t * 15) * 0.03;
+      if (k > 0.55) {                               // zoom blur at full speed
+        for (let i = 3; i >= 1; i--) drawSprite(fctx, 'cow', x, y, w * s * (1 - 0.05 * i), rot, { alpha: 0.18 });
       }
+    } else if (c.phase === 'hit') {
+      const k = c.t / 0.9;
+      s = 1.03 - 0.12 * Math.min(1, k * 3);         // squash into the glass, then recoil
+      rot = Math.sin(c.t * 18) * 0.04 * (1 - k);    // shakes its head
+      x = c.x + Math.sin(c.t * 40) * 3 * SC * (1 - k);
+    } else {
+      const k = c.t / 1.3;
+      s = 0.91 - 0.75 * k * k; alpha = 1 - k * k;   // backs off into the distance
+      y = c.y - k * H * 0.15;
     }
+    drawSprite(fctx, 'cow', x, y, w * s, rot, { alpha, sy: c.phase === 'hit' && c.t < 0.1 ? 0.97 : 1 });
   }
 
   // hit-test living things under a finger (works with any tool)
@@ -831,25 +895,23 @@
       const x = r.x0 + (r.x1 - r.x0) * e, y = r.y0 + (r.y1 - r.y0) * e;
       r.ang = Math.atan2(r.y1 - r.y0, r.x1 - r.x0);
       r.x = x; r.y = y;
-      addParticle({ k: 'smoke', x: x - Math.cos(r.ang) * 20 * SC, y: y - Math.sin(r.ang) * 20 * SC, vx: rnd(-20, 20), vy: rnd(-20, 20), life: rnd(0.8, 1.5), age: 0, s: rnd(6, 12) * SC });
+      addParticle({ k: 'smoke', x: x - Math.cos(r.ang) * 80 * SC, y: y - Math.sin(r.ang) * 80 * SC, vx: rnd(-20, 20), vy: rnd(-20, 20), life: rnd(0.8, 1.5), age: 0, s: rnd(6, 12) * SC });
       if (k >= 1) { rockets.splice(i, 1); nukeExplode(r.x1, r.y1); }
     }
     for (let i = mushrooms.length - 1; i >= 0; i--) { mushrooms[i].t += dt; if (mushrooms[i].t >= mushrooms[i].life) mushrooms.splice(i, 1); }
-    for (let i = stinks.length - 1; i >= 0; i--) { stinks[i].t += dt; if (stinks[i].t >= stinks[i].life) stinks.splice(i, 1); }
     whiteout = Math.max(0, whiteout - dt / 1.6);
     redFlash = Math.max(0, redFlash - dt / 0.6);
   }
   function drawNewStuff(now) {
     for (const m of mushrooms) drawMushroom(m);
-    for (const st of stinks) drawStink(st);
     for (const b of ants) if (b.t >= 0) drawAnt(fctx, b);
     for (const b of roaches) if (b.t >= 0) drawRoach(fctx, b);
     for (const s of sheep) drawSheep(s);
-    for (const b of bees) drawBee(fctx, b.x, b.y, b.vx, b.ph);
+    for (const f of flies) drawFly(f);
+    for (const b of bees) drawBee(fctx, b);
     for (const c of cows) drawCow(c);
-    // 🚀 emoji points up-right (−45°); rotate it to the flight direction
-    for (const r of rockets) if (r.x !== undefined) drawEmoji(fctx, '🚀', r.x, r.y, 46 * SC, false, r.ang + Math.PI / 4);
-    for (const p of pointers.values()) if (tool === 'saw') drawChainsaw(fctx, p.x, p.y, p.ang || -Math.PI / 4, now / 1000);
+    for (const r of rockets) if (r.x !== undefined) drawMissile(r);
+    for (const p of pointers.values()) if (tool === 'saw') drawChainsaw(fctx, p.x, p.y, p.ang ?? -Math.PI / 4);
   }
   function drawScreenFlashes() {
     if (whiteout > 0) { fctx.fillStyle = `rgba(255,252,235,${Math.min(1, whiteout * 1.3)})`; fctx.fillRect(0, 0, W, H); }
@@ -860,7 +922,7 @@
     }
   }
   function clearNewStuff() {
-    for (const a of [rockets, mushrooms, honeySpots, drips, ants, roaches, bees, sheep, stinks, cows]) a.length = 0;
+    for (const a of [rockets, mushrooms, honeySpots, drips, ants, roaches, bees, sheep, flies, cows]) a.length = 0;
     whiteout = 0; redFlash = 0;
   }
 
@@ -1118,16 +1180,15 @@
           break;
         }
         case 'dust': {
-          const r = p.s * (1 + t);
-          fctx.fillStyle = `rgba(200,195,185,${0.5 * (1 - t)})`;
-          fctx.beginPath(); fctx.arc(p.x, p.y, r, 0, TAU); fctx.fill();
+          const r = p.s * (1 + t * 1.5);
+          const g = fctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+          g.addColorStop(0, `rgba(190,180,165,${0.35 * (1 - t)})`); g.addColorStop(1, 'rgba(190,180,165,0)');
+          fctx.fillStyle = g; fctx.beginPath(); fctx.arc(p.x, p.y, r, 0, TAU); fctx.fill();
           break;
         }
         case 'deadbee': {
           p.vy += 600 * dt; p.rot += p.vr * dt;
-          fctx.globalAlpha = 1 - t * t;
-          drawBee(fctx, p.x, p.y, 1, 0, Math.PI + p.rot);
-          fctx.globalAlpha = 1;
+          drawBee(fctx, { x: p.x, y: p.y, rot: p.rot, ph: 0 }, true);
           break;
         }
         case 'flash': {
