@@ -41,7 +41,8 @@ jobs:
           ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           KS="$RUNNER_TEMP/release.jks"
-          echo "::notice::keystore size=$(wc -c < "$KS") sha256=$(sha256sum "$KS" | cut -c1-16) | password length=${#PW} | alias='${ALIAS}'"
+          ALIAS="$(echo -n "$ALIAS" | tr -d '[:space:]')"; PW="$(echo -n "$PW" | tr -d '[:space:]')"
+          echo "::notice::keystore size=$(wc -c < "$KS") sha256=$(sha256sum "$KS" | cut -c1-16) | password length=${#PW} | alias length=${#ALIAS}"
           if ! keytool -list -keystore "$KS" -storepass "$PW" > "$RUNNER_TEMP/ks.txt" 2>&1; then
             echo "::error::keytool cannot open the keystore: $(grep -v JAVA_TOOL "$RUNNER_TEMP/ks.txt" | head -2 | tr '\n' ' ')"
             exit 1
