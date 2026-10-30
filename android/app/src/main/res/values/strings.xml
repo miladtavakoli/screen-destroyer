@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">نابودگر صفحه</string>
+    <string name="perm_title">اجازه‌ی نمایش روی برنامه‌ها</string>
+    <string name="perm_message">برای اینکه بتونی روی هر برنامه‌ای (نه فقط صفحه‌ی خانه) دارت بزنی و بمب بترکونی، اجازه‌ی «نمایش روی برنامه‌های دیگر» لازمه.</string>
+    <string name="perm_grant">اجازه بده</string>
+    <string name="perm_just_here">فقط همین‌جا</string>
+    <string name="channel_name">حالت شناور</string>
+    <string name="notif_text">روی 💥 بزن تا صفحه‌ی فعلی رو نابود کنی</string>
+    <string name="notif_stop">خروج</string>
+    <string name="bye">نابودگر بسته شد</string>
+</resources>

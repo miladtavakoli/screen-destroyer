@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Screen Destroyer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="marks"></canvas>
+    <canvas id="fx"></canvas>
+  </div>
+
+  <div id="toolbar" role="toolbar">
+    <div id="tools">
+      <button class="tool active" data-tool="dart"   title="دارت"><span>🎯</span><small>دارت</small></button>
+      <button class="tool"        data-tool="hammer" title="چکش"><span>🔨</span><small>چکش</small></button>
+      <button class="tool"        data-tool="gun"    title="مسلسل"><span>🔫</span><small>مسلسل</small></button>
+      <button class="tool"        data-tool="bomb"   title="بمب"><span>💣</span><small>بمب</small></button>
+      <button class="tool"        data-tool="flame"  title="شعله"><span>🔥</span><small>شعله</small></button>
+    </div>
+    <div id="actions">
+      <button id="btn-sound" title="صدا"><span>🔊</span></button>
+      <button id="btn-clear" title="پاک کردن"><span>🧹</span></button>
+      <button id="btn-hide"  title="جمع کردن نوار"><span>⌄</span></button>
+      <button id="btn-close" title="خروج"><span>✕</span></button>
+    </div>
+  </div>
+  <button id="btn-show" title="نمایش نوار" hidden>⌃</button>
+
+  <script src="sound.js"></script>
+  <script src="engine.js"></script>
+</body>
+</html>

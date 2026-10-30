@@ -1,0 +1,55 @@
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  overflow: hidden;
+  background: transparent;              /* the screen underneath shows through */
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  font-family: Vazirmatn, "Noto Sans Arabic", Tahoma, sans-serif;
+}
+body.has-bg { background: #000 center / 100% 100% no-repeat; }
+
+#stage { position: fixed; inset: 0; }
+#stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#fx { cursor: crosshair; }
+
+#toolbar {
+  position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: center;
+  padding: 6px; border-radius: 22px;
+  background: rgba(20, 20, 24, .78);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.08);
+  z-index: 10; direction: rtl; max-width: calc(100vw - 16px);
+  transition: transform .25s ease, opacity .25s ease;
+}
+#toolbar.hidden { transform: translate(-50%, 140%); opacity: 0; pointer-events: none; }
+#tools, #actions { display: flex; gap: 4px; }
+#actions { padding-inline-start: 6px; border-inline-start: 1px solid rgba(255,255,255,.12); }
+
+#toolbar button {
+  border: 0; background: transparent; color: #eee;
+  border-radius: 16px; padding: 6px 8px; min-width: 46px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font: inherit; cursor: pointer;
+}
+#toolbar button span { font-size: 24px; line-height: 1; }
+#toolbar button small { font-size: 10px; opacity: .8; }
+#actions button { min-width: 38px; justify-content: center; }
+#actions button span { font-size: 18px; }
+#toolbar button.active { background: rgba(255, 120, 40, .9); color: #fff; }
+#toolbar button:active { transform: scale(.92); }
+
+#btn-show {
+  position: fixed; left: 50%; bottom: max(6px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  border: 0; border-radius: 14px; padding: 2px 18px;
+  background: rgba(20,20,24,.6); color: #fff; font-size: 18px; z-index: 10;
+}
+
+@media (max-width: 420px) {
+  #toolbar button { min-width: 40px; padding: 5px 5px; }
+  #toolbar button span { font-size: 21px; }
+  #actions button { min-width: 32px; }
+}

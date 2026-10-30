@@ -1,0 +1,48 @@
+{
+  "name": "screen-destroyer",
+  "productName": "Screen Destroyer",
+  "version": "1.0.0",
+  "description": "Throw darts, crack glass and blow up your desktop (prank toy).",
+  "main": "main.js",
+  "homepage": "https://github.com/miladtavakoli/screen-destroyer",
+  "author": {
+    "name": "Milad Tavakoli",
+    "email": "miladtavakoli@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:screenshot": "electron . --screenshot",
+    "dist": "electron-builder --linux AppImage deb --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.miladtavakoli.screendestroyer",
+    "files": [
+      "main.js",
+      "preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../core",
+        "to": "core"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Game",
+      "icon": "icon.png"
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miladtavakoli/screen-destroyer.git"
+  }
+}
