@@ -9,10 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "com.miladtavakoli.screendestroyer"
-        minSdk = 26          // TYPE_APPLICATION_OVERLAY
+        minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.1.0"
     }
 
     // The shared engine (../../core) is packaged as-is into the APK's assets,
