@@ -1,9 +1,3 @@
 {
-  "cow_front": {"titles": ["File:Cow (Fleckvieh breed) Oeschinensee Slaunger 2009-07-07 (cropped).jpg", "File:CH cow 2.jpg", "File:Cow.jpg", "File:Cow standing on a field in Chastre (DSC02477).jpg", "File:Cow in the Swiss Alps (30328344718).jpg"],
-                "terms": ["cow looking at camera incategory:\"Quality images of cattle\"", "cow front view meadow featured"], "per_term": 6, "max": 12, "size": 900},
-  "sheep_side": {"terms": ["sheep incategory:\"Quality images of Ovis aries\"", "Ovis aries standing profile", "sheep standing side on grass", "ewe standing side view", "Suffolk sheep standing", "Texel sheep standing"], "per_term": 5, "max": 16, "size": 800},
-  "missile": {"titles": ["File:Tomahawk Block IV cruise missile -crop.jpg", "File:Tomahawk Block IV cruise missile.jpg", "File:Hawk Missile.jpg"],
-              "terms": ["missile on display museum isolated", "rocket on launch stand museum"], "per_term": 4, "max": 8, "size": 700},
-  "fly_top": {"titles": ["File:Musca domestica September 2007-1.jpg"], "terms": ["Musca domestica dorsal", "housefly macro dorsal", "Calliphora vicina dorsal"], "per_term": 5, "max": 10, "size": 300},
-  "honey_drip": {"terms": ["honey dripping", "honey drip spoon", "honey pouring"], "per_term": 5, "max": 10, "size": 500}
+  "sheep_side": {"category": "Category:Quality images of sheep", "max": 80, "size": 800}
 }

@@ -62,6 +62,13 @@ def by_titles(titles):
     return out
 
 
+def category_titles(cat, limit):
+    params = {"action": "query", "format": "json", "list": "categorymembers", "cmtitle": cat,
+              "cmtype": "file", "cmlimit": limit}
+    r = requests.get(API, params=params, headers=UA, timeout=60); r.raise_for_status()
+    return [m["title"] for m in r.json()["query"]["categorymembers"]]
+
+
 def largest_component(img):
     """Keep only the biggest opaque blob (drops scale bars, labels, stray bits)."""
     import numpy as np
@@ -83,12 +90,16 @@ def main():
     for key, spec in queries.items():
         d = out / key; d.mkdir(exist_ok=True)
         cands, seen = [], set()
-        if spec.get("titles"):
+        titles = list(spec.get("titles", []))
+        if spec.get("category"):
+            titles += category_titles(spec["category"], spec.get("max", 40))
+        for k in range(0, len(titles), 40):
             try:
-                for c in by_titles(spec["titles"]):
+                for c in by_titles(titles[k:k + 40]):
                     seen.add(c["title"]); cands.append(c)
             except Exception as e:
                 print("titles failed", key, e)
+        cands = [c for c in cands if FREE.match(c["license"])]
         for term in spec.get("terms", []):
             try:
                 for c in search(term, spec.get("per_term", 10)):
