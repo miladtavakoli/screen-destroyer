@@ -16,7 +16,7 @@ body.has-bg { background: #000 center / 100% 100% no-repeat; }
 #toolbar {
   position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  display: flex; gap: 6px; align-items: center;
+  display: flex; flex-direction: column; gap: 4px; align-items: stretch;
   padding: 6px; border-radius: 22px;
   background: rgba(20, 20, 24, .78);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -25,8 +25,18 @@ body.has-bg { background: #000 center / 100% 100% no-repeat; }
   transition: transform .25s ease, opacity .25s ease;
 }
 #toolbar.hidden { transform: translate(-50%, 140%); opacity: 0; pointer-events: none; }
-#tools, #actions { display: flex; gap: 4px; }
+#tools {
+  display: flex; gap: 4px; justify-content: center;
+  overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,.10);
+}
+#tools::-webkit-scrollbar { display: none; }
+#bottom { display: flex; gap: 4px; justify-content: space-between; }
+#cats, #actions { display: flex; gap: 2px; }
 #actions { padding-inline-start: 6px; border-inline-start: 1px solid rgba(255,255,255,.12); }
+#toolbar button.cat { min-width: 44px; padding: 3px 6px; opacity: .6; }
+#toolbar button.cat span { font-size: 18px; }
+#toolbar button.cat.active { opacity: 1; background: rgba(255,255,255,.14); }
 
 #toolbar button {
   border: 0; background: transparent; color: #eee;
@@ -49,7 +59,8 @@ body.has-bg { background: #000 center / 100% 100% no-repeat; }
 }
 
 @media (max-width: 420px) {
-  #toolbar button { min-width: 40px; padding: 5px 5px; }
+  #toolbar button { min-width: 40px; padding: 5px 4px; }
   #toolbar button span { font-size: 21px; }
-  #actions button { min-width: 32px; }
+  #toolbar button.cat { min-width: 38px; padding: 3px 3px; }
+  #actions button { min-width: 30px; }
 }
