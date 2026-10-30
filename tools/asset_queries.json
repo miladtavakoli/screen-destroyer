@@ -1,0 +1,11 @@
+{
+  "cow_front":  {"terms": ["cow facing camera", "Holstein cow front view", "cow head on portrait field", "bull frontal view"], "max": 12},
+  "sheep_side": {"terms": ["sheep side view standing", "white sheep profile", "domestic sheep standing grass side", "lamb side view"], "max": 12},
+  "ant_top":    {"terms": ["ant dorsal view", "Formica ant top view", "black ant from above", "Camponotus dorsal"], "max": 12},
+  "roach_top":  {"terms": ["cockroach dorsal view", "Periplaneta americana dorsal", "Blattella germanica dorsal", "cockroach top view white background"], "max": 12},
+  "bee_top":    {"terms": ["honey bee dorsal view", "Apis mellifera top view", "bee from above white background", "Apis mellifera dorsal"], "max": 12},
+  "fly_top":    {"terms": ["housefly dorsal view", "Musca domestica dorsal", "fly top view white background"], "max": 8},
+  "missile":    {"terms": ["missile isolated", "ballistic missile display", "rocket white background", "cruise missile museum"], "max": 12},
+  "chainsaw":   {"terms": ["chainsaw isolated", "chainsaw white background", "Stihl chainsaw", "chain saw"], "max": 10},
+  "droppings":  {"terms": ["sheep droppings", "sheep dung pellets", "goat droppings"], "max": 8}
+}

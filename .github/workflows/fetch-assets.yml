@@ -1,0 +1,30 @@
+name: fetch-assets
+# Manually run: searches Wikimedia Commons for freely-licensed photos, removes
+# backgrounds and pushes candidates to the `asset-candidates` branch for review.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install tools
+        run: pip install "rembg[cpu]==2.0.59" pillow requests
+      - name: Fetch and cut out
+        run: python tools/fetch_assets.py tools/asset_queries.json candidates
+      - name: Push candidates branch
+        run: |
+          git config user.name "asset-bot"
+          git config user.email "asset-bot@users.noreply.github.com"
+          git checkout --orphan asset-candidates
+          git rm -rq --cached .
+          git add candidates
+          git commit -qm "Asset candidates $(date -u +%F)"
+          git push -f origin asset-candidates
