@@ -1,11 +1,9 @@
 {
-  "cow_front":  {"terms": ["cow facing camera", "Holstein cow front view", "cow head on portrait field", "bull frontal view"], "max": 12},
-  "sheep_side": {"terms": ["sheep side view standing", "white sheep profile", "domestic sheep standing grass side", "lamb side view"], "max": 12},
-  "ant_top":    {"terms": ["ant dorsal view", "Formica ant top view", "black ant from above", "Camponotus dorsal"], "max": 12},
-  "roach_top":  {"terms": ["cockroach dorsal view", "Periplaneta americana dorsal", "Blattella germanica dorsal", "cockroach top view white background"], "max": 12},
-  "bee_top":    {"terms": ["honey bee dorsal view", "Apis mellifera top view", "bee from above white background", "Apis mellifera dorsal"], "max": 12},
-  "fly_top":    {"terms": ["housefly dorsal view", "Musca domestica dorsal", "fly top view white background"], "max": 8},
-  "missile":    {"terms": ["missile isolated", "ballistic missile display", "rocket white background", "cruise missile museum"], "max": 12},
-  "chainsaw":   {"terms": ["chainsaw isolated", "chainsaw white background", "Stihl chainsaw", "chain saw"], "max": 10},
-  "droppings":  {"terms": ["sheep droppings", "sheep dung pellets", "goat droppings"], "max": 8}
+  "cow_front": {"titles": ["File:Cow (Fleckvieh breed) Oeschinensee Slaunger 2009-07-07 (cropped).jpg", "File:CH cow 2.jpg", "File:Cow.jpg", "File:Cow standing on a field in Chastre (DSC02477).jpg", "File:Cow in the Swiss Alps (30328344718).jpg"],
+                "terms": ["cow looking at camera incategory:\"Quality images of cattle\"", "cow front view meadow featured"], "per_term": 6, "max": 12, "size": 900},
+  "sheep_side": {"terms": ["sheep incategory:\"Quality images of Ovis aries\"", "Ovis aries standing profile", "sheep standing side on grass", "ewe standing side view", "Suffolk sheep standing", "Texel sheep standing"], "per_term": 5, "max": 16, "size": 800},
+  "missile": {"titles": ["File:Tomahawk Block IV cruise missile -crop.jpg", "File:Tomahawk Block IV cruise missile.jpg", "File:Hawk Missile.jpg"],
+              "terms": ["missile on display museum isolated", "rocket on launch stand museum"], "per_term": 4, "max": 8, "size": 700},
+  "fly_top": {"titles": ["File:Musca domestica September 2007-1.jpg"], "terms": ["Musca domestica dorsal", "housefly macro dorsal", "Calliphora vicina dorsal"], "per_term": 5, "max": 10, "size": 300},
+  "honey_drip": {"terms": ["honey dripping", "honey drip spoon", "honey pouring"], "per_term": 5, "max": 10, "size": 500}
 }

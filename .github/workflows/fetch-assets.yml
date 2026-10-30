@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install tools
-        run: pip install "rembg[cpu]==2.0.59" pillow requests
+        run: pip install "rembg[cpu]==2.0.59" pillow requests scipy numpy
       - name: Fetch and cut out
         run: python tools/fetch_assets.py tools/asset_queries.json candidates
       - name: Push candidates branch

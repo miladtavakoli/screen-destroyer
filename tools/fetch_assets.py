@@ -46,6 +46,36 @@ def search(term, limit):
     return out
 
 
+def by_titles(titles):
+    params = {"action": "query", "format": "json", "titles": "|".join(titles), "prop": "imageinfo",
+              "iiprop": "url|extmetadata|size|mime", "iiurlwidth": 1400}
+    r = requests.get(API, params=params, headers=UA, timeout=60); r.raise_for_status()
+    out = []
+    for p in r.json().get("query", {}).get("pages", {}).values():
+        ii = (p.get("imageinfo") or [{}])[0]
+        if not ii: print("missing", p.get("title")); continue
+        md = ii.get("extmetadata", {})
+        out.append({"title": p["title"], "thumb": ii.get("thumburl") or ii.get("url"), "page": ii.get("descriptionurl"),
+                    "license": clean(md.get("LicenseShortName", {}).get("value")),
+                    "license_url": clean(md.get("LicenseUrl", {}).get("value")),
+                    "artist": clean(md.get("Artist", {}).get("value"))[:200]})
+    return out
+
+
+def largest_component(img):
+    """Keep only the biggest opaque blob (drops scale bars, labels, stray bits)."""
+    import numpy as np
+    from scipy import ndimage
+    a = np.array(img)
+    mask = a[:, :, 3] > 40
+    lab, n = ndimage.label(ndimage.binary_dilation(mask, iterations=3))
+    if n <= 1: return img
+    sizes = ndimage.sum(mask, lab, range(1, n + 1))
+    keep = lab == (int(np.argmax(sizes)) + 1)
+    a[:, :, 3] = np.where(keep, a[:, :, 3], 0)
+    return Image.fromarray(a)
+
+
 def main():
     queries = json.load(open(sys.argv[1]))
     out = Path(sys.argv[2]); out.mkdir(parents=True, exist_ok=True)
@@ -53,7 +83,13 @@ def main():
     for key, spec in queries.items():
         d = out / key; d.mkdir(exist_ok=True)
         cands, seen = [], set()
-        for term in spec["terms"]:
+        if spec.get("titles"):
+            try:
+                for c in by_titles(spec["titles"]):
+                    seen.add(c["title"]); cands.append(c)
+            except Exception as e:
+                print("titles failed", key, e)
+        for term in spec.get("terms", []):
             try:
                 for c in search(term, spec.get("per_term", 10)):
                     if c["title"] not in seen:
@@ -71,8 +107,9 @@ def main():
                 bbox = cut.getbbox()
                 if not bbox:
                     continue
-                cut = cut.crop(bbox)
-                cut.thumbnail((700, 700))
+                cut = largest_component(cut.crop(bbox))
+                cut = cut.crop(cut.getbbox())
+                cut.thumbnail((spec.get("size", 700),) * 2)
                 name = f"{i:02d}.png"
                 cut.save(d / name, optimize=True)
                 c["file"] = f"{key}/{name}"
