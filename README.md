@@ -34,7 +34,16 @@ linux/     پوسته‌ی لینوکس (Electron): پنجره‌ی شفاف ه�
 cd android
 ./gradlew assembleRelease     # → app/build/outputs/apk/release/app-release.apk
 ```
-APK ریلیز با کلید debug امضا می‌شه که مستقیم نصب بشه. قبل از انتشار، `signingConfig` رو با کلید خودت عوض کن.
+### امضای APK
+APKهای Release با کلید اختصاصی پروژه امضا می‌شن. کلید توی GitHub Secrets نگه‌داری می‌شه و توی ریپو نیست:
+
+| Secret | مقدار |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | محتوای فایل `.jks` به base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | رمز keystore و کلید |
+| `ANDROID_KEY_ALIAS` | `screendestroyer` |
+
+اگه این Secretها تنظیم نشده باشن، APK با کلید debug ساخته می‌شه و **منتشر نمی‌شه**. از فایل کلید یه نسخه‌ی پشتیبان امن نگه دار؛ بدون اون، آپدیت‌های بعدی روی نسخه‌ی نصب‌شده نصب نمی‌شن.
 
 ## لینوکس
 ```bash

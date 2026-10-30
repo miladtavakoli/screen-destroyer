@@ -1,7 +1,7 @@
 {
   "name": "screen-destroyer",
   "productName": "Screen Destroyer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Throw darts, crack glass and blow up your desktop (prank toy).",
   "main": "main.js",
   "homepage": "https://github.com/miladtavakoli/screen-destroyer",
