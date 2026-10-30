@@ -1,5 +1,7 @@
 # 💥 نابودگر صفحه (Screen Destroyer)
 
+**⬇️ دانلود:** [آخرین نسخه (APK اندروید، AppImage و deb لینوکس)](https://github.com/miladtavakoli/screen-destroyer/releases/latest)
+
 یه اسباب‌بازی که روی صفحه می‌آد و می‌ذاره با دارت، چکش، مسلسل، بمب و شعله‌افکن «نابودش» کنی.
 کد جلوه‌ها یک بار نوشته شده و روی اندروید و لینوکس عیناً همونه.
 
@@ -45,7 +47,7 @@ npm run dist              # → dist/*.AppImage و dist/*.deb
 
 ## ساخت خودکار با GitHub
 این پوشه رو push کن تو یه ریپو. Actions خودش APK و AppImage/deb رو می‌سازه (تب **Actions** ← آخرین اجرا ← Artifacts).
-اگه یه تگ مثل `v1.0.0` push کنی، فایل‌ها به یه Release هم ضمیمه می‌شن.
+هر build موفق روی `main` یه Release با نسخه‌ی `linux/package.json` (مثلاً `v1.0.0`) می‌سازه یا به‌روز می‌کنه. برای نسخه‌ی جدید، `version` رو توی `linux/package.json` بالا ببر (و `versionCode`/`versionName` توی `android/app/build.gradle.kts`).
 
 ## اضافه کردن ابزار جدید
 همه‌چیز توی `core/engine.js` هست: یه دکمه به `index.html` اضافه کن، یه تابع جلوه بنویس (روی `mctx` برای آسیب ماندگار، با `addParticle` برای ذرات)، و توی `pointerdown` صداش بزن. صداها توی `core/sound.js` با Web Audio ساخته می‌شن و فایل صوتی لازم ندارن.

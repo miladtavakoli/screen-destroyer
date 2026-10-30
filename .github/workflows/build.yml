@@ -50,17 +50,40 @@ jobs:
             linux/dist/*.deb
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Every successful build on main (or a v* tag) publishes a GitHub Release
+    # named after the version in linux/package.json, e.g. v1.0.0.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [android, linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+      - name: Read version
+        id: ver
+        run: echo "tag=v$(node -p "require('./linux/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           path: out
+      - name: Collect files
+        run: |
+          mkdir -p release
+          cp out/android-apk/screen-destroyer.apk "release/screen-destroyer-${{ steps.ver.outputs.tag }}.apk"
+          for f in out/linux/*.AppImage; do cp "$f" "release/screen-destroyer-${{ steps.ver.outputs.tag }}-linux-x86_64.AppImage"; done
+          for f in out/linux/*.deb; do cp "$f" "release/screen-destroyer-${{ steps.ver.outputs.tag }}-linux-amd64.deb"; done
+          ls -la release
       - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            out/android-apk/*.apk
-            out/linux/*
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Screen Destroyer ${{ steps.ver.outputs.tag }}
+          make_latest: true
+          overwrite_files: true
+          body: |
+            ## دانلود
+            - **اندروید:** `screen-destroyer-${{ steps.ver.outputs.tag }}.apk` — دانلود و نصب کن (اجازه‌ی نصب از منابع ناشناس لازمه). حداقل اندروید ۸.
+            - **لینوکس (همه‌ی توزیع‌ها):** `…-linux-x86_64.AppImage` — بعد از دانلود: `chmod +x` و اجرا.
+            - **دبیان/اوبونتو:** `…-linux-amd64.deb` — `sudo apt install ./فایل.deb`
+
+            روی لینوکس بدون compositor با `--screenshot` اجرا کن.
+          files: release/*
