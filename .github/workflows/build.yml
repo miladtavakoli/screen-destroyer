@@ -34,6 +34,23 @@ jobs:
             echo "::warning::ANDROID_KEYSTORE_BASE64 secret not set - APK is debug-signed and will NOT be published as a release."
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Check signing secrets
+        if: steps.key.outputs.signed == 'true'
+        env:
+          PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          KS="$RUNNER_TEMP/release.jks"
+          echo "::notice::keystore size=$(wc -c < "$KS") sha256=$(sha256sum "$KS" | cut -c1-16) | password length=${#PW} | alias='${ALIAS}'"
+          if ! keytool -list -keystore "$KS" -storepass "$PW" > "$RUNNER_TEMP/ks.txt" 2>&1; then
+            echo "::error::keytool cannot open the keystore: $(grep -v JAVA_TOOL "$RUNNER_TEMP/ks.txt" | head -2 | tr '\n' ' ')"
+            exit 1
+          fi
+          if ! grep -qi "^${ALIAS:-screendestroyer}," "$RUNNER_TEMP/ks.txt"; then
+            echo "::error::alias '${ALIAS}' not found. Aliases: $(grep -i privatekeyentry "$RUNNER_TEMP/ks.txt" | cut -d, -f1 | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "::notice::signing secrets OK"
       - name: Build APK
         working-directory: android
         env:
